@@ -6,7 +6,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # Load model checkpoint
 checkpoint = 'checkpoint_ssd300.pth.tar'
-checkpoint = torch.load(checkpoint)
+checkpoint = torch.load(checkpoint,  map_location=torch.device('cpu'))
 start_epoch = checkpoint['epoch'] + 1
 print('\nLoaded checkpoint from epoch %d.\n' % start_epoch)
 model = checkpoint['model']
@@ -64,7 +64,8 @@ def detect(original_image, min_score, max_overlap, top_k, suppress=None):
     # Annotate
     annotated_image = original_image
     draw = ImageDraw.Draw(annotated_image)
-    font = ImageFont.truetype("./calibril.ttf", 15)
+    font = ImageFont.load_default()
+    #font = ImageFont.truetype("./calibril.ttf", 15)
 
     # Suppress specific classes, if needed
     for i in range(det_boxes.size(0)):
@@ -92,11 +93,13 @@ def detect(original_image, min_score, max_overlap, top_k, suppress=None):
                   font=font)
     del draw
 
+    print('Type of annotated : ', type(annotated_image))
+    annotated_image.save('predictions.png')
     return annotated_image
 
 
 if __name__ == '__main__':
-    img_path = '/media/ssd/ssd data/VOC2007/JPEGImages/000001.jpg'
+    img_path = 'dahua2-z2.png'
     original_image = Image.open(img_path, mode='r')
     original_image = original_image.convert('RGB')
-    detect(original_image, min_score=0.2, max_overlap=0.5, top_k=200).show()
+    detect(original_image, min_score=0.2, max_overlap=0.5, top_k=200)
