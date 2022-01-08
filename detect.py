@@ -23,7 +23,7 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 
 
-def detect(original_image, min_score, max_overlap, top_k, pid, suppress=None):
+def detect(original_image, min_score, max_overlap, top_k, pid, frame_id=-1, suppress=None):
     """
     Detect objects in an image with a trained SSD300, and visualize the results.
 
@@ -60,8 +60,12 @@ def detect(original_image, min_score, max_overlap, top_k, pid, suppress=None):
     det_labels = [rev_label_map[l] for l in det_labels[0].to('cpu').tolist()]
 
     # If no objects found, the detected labels will be set to ['0.'], i.e. ['background'] in SSD300.detect_objects() in model.py
+    if frame_id == -1:
+        csv_file = f'{pid}-predictions.csv'
+    else:
+        csv_file = f'{pid}-{frame_id}-predictions.csv'
     if det_labels == ['background']:
-        with open(f'{pid}-predictions.csv', 'w') as f:
+        with open(csv_file, 'w') as f:
             f.write(f'left,top,right,bottom,class,confidence\n')
         # Just return original image
         return original_image
@@ -73,7 +77,7 @@ def detect(original_image, min_score, max_overlap, top_k, pid, suppress=None):
 
     # Suppress specific classes, if needed
 
-    with open(f'{pid}-predictions.csv', 'w') as f:
+    with open(csv_file, 'w') as f:
         f.write(f'left,top,right,bottom,class,confidence\n')
         for i in range(det_boxes.size(0)):
             if suppress is not None:
@@ -87,20 +91,6 @@ def detect(original_image, min_score, max_overlap, top_k, pid, suppress=None):
                 box_location[j] = int(max(box_location[j], 0))
             f.write(f'{int(box_location[0])},{int(box_location[1])},{int(box_location[2])},{int(box_location[3])},{det_labels[i]},{det_scores[0][i].item() * 100}\n')
 
-#            draw.rectangle(xy=box_location, outline=label_color_map[det_labels[i]])
-#            draw.rectangle(xy=[l + 1. for l in box_location], outline=label_color_map[
-#                det_labels[i]])  # a second rectangle at an offset of 1 pixel to increase line thickness
-#
-            # Text
-#            text_size = font.getsize(det_labels[i].upper())
-#            text_location = [box_location[0] + 2., box_location[1] - text_size[1]]
-#            textbox_location = [box_location[0], box_location[1] - text_size[1], box_location[0] + text_size[0] + 4.,
-#                                box_location[1]]
-#            draw.rectangle(xy=textbox_location, fill=label_color_map[det_labels[i]])
-#            draw.text(xy=text_location, text=f'{det_labels[i]} ({str(det_scores[0][i].item())})', fill='white',
-#                      font=font)
-#    del draw
-#    annotated_image.save('predictions.png')
     return annotated_image
 
 
@@ -108,10 +98,13 @@ if __name__ == '__main__':
     ap = argparse.ArgumentParser()
     ap.add_argument(
         "--input",
-        help="Input image"
-#        nargs="+",
-        #help="A list of space separated input images; "
-#        "or a single glob pattern such as 'directory/*.jpg'",
+        nargs="+",
+        help="A list of space separated input images; "
+    )
+    ap.add_argument(
+        "--frames",
+        nargs="+",
+        help="Frame numbers",
     )
 
     ap.add_argument(
@@ -121,7 +114,11 @@ if __name__ == '__main__':
     )
 
     args = ap.parse_args()
-    original_image = Image.open(args.input, mode='r')
-    original_image = original_image.convert('RGB')
-    detect(original_image, min_score=0.4, max_overlap=0.5, top_k=200, pid=args.pid)
+    for i,img in enumerate(args.input):
+        original_image = Image.open(img, mode='r')
+        original_image = original_image.convert('RGB')
+        if args.frames:
+            detect(original_image, min_score=0.4, max_overlap=0.5, top_k=200, pid=args.pid, frame_id=args.frames[i])
+        else:
+            detect(original_image, min_score=0.4, max_overlap=0.5, top_k=200, pid=args.pid)
 
