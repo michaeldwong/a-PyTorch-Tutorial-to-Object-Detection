@@ -85,22 +85,22 @@ def detect(original_image, min_score, max_overlap, top_k, pid, suppress=None):
             box_location = det_boxes[i].tolist()
             for j in range(len(box_location)):
                 box_location[j] = int(max(box_location[j], 0))
-            f.write(f'{int(box_location[0])},{int(box_location[1])},{int(box_location[2])},{int(box_location[3])},{det_labels[i]},{det_scores[0][i].item()}\n')
+            f.write(f'{int(box_location[0])},{int(box_location[1])},{int(box_location[2])},{int(box_location[3])},{det_labels[i]},{det_scores[0][i].item() * 100}\n')
 
-            draw.rectangle(xy=box_location, outline=label_color_map[det_labels[i]])
-            draw.rectangle(xy=[l + 1. for l in box_location], outline=label_color_map[
-                det_labels[i]])  # a second rectangle at an offset of 1 pixel to increase line thickness
-
+#            draw.rectangle(xy=box_location, outline=label_color_map[det_labels[i]])
+#            draw.rectangle(xy=[l + 1. for l in box_location], outline=label_color_map[
+#                det_labels[i]])  # a second rectangle at an offset of 1 pixel to increase line thickness
+#
             # Text
-            text_size = font.getsize(det_labels[i].upper())
-            text_location = [box_location[0] + 2., box_location[1] - text_size[1]]
-            textbox_location = [box_location[0], box_location[1] - text_size[1], box_location[0] + text_size[0] + 4.,
-                                box_location[1]]
-            draw.rectangle(xy=textbox_location, fill=label_color_map[det_labels[i]])
-            draw.text(xy=text_location, text=f'{det_labels[i]} ({str(det_scores[0][i].item())})', fill='white',
-                      font=font)
+#            text_size = font.getsize(det_labels[i].upper())
+#            text_location = [box_location[0] + 2., box_location[1] - text_size[1]]
+#            textbox_location = [box_location[0], box_location[1] - text_size[1], box_location[0] + text_size[0] + 4.,
+#                                box_location[1]]
+#            draw.rectangle(xy=textbox_location, fill=label_color_map[det_labels[i]])
+#            draw.text(xy=text_location, text=f'{det_labels[i]} ({str(det_scores[0][i].item())})', fill='white',
+#                      font=font)
 #    del draw
-    annotated_image.save('predictions.png')
+#    annotated_image.save('predictions.png')
     return annotated_image
 
 
@@ -124,3 +124,4 @@ if __name__ == '__main__':
     original_image = Image.open(args.input, mode='r')
     original_image = original_image.convert('RGB')
     detect(original_image, min_score=0.4, max_overlap=0.5, top_k=200, pid=args.pid)
+
