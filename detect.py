@@ -23,7 +23,7 @@ normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                  std=[0.229, 0.224, 0.225])
 
 
-def detect(original_image, min_score, max_overlap, top_k, pid, frame_id=-1, suppress=None):
+def detect(original_image, min_score, max_overlap, top_k, pid, frame_id=-1, suppress=None, draw_img=False):
     """
     Detect objects in an image with a trained SSD300, and visualize the results.
 
@@ -70,12 +70,34 @@ def detect(original_image, min_score, max_overlap, top_k, pid, frame_id=-1, supp
         # Just return original image
         return original_image
 
-    # Annotate
-    annotated_image = original_image
-    draw = ImageDraw.Draw(annotated_image)
-    font = ImageFont.load_default()
+    if draw_img:
+        # Annotate
+        annotated_image = original_image
+        draw = ImageDraw.Draw(annotated_image)
+        font = ImageFont.load_default()
 
-    # Suppress specific classes, if needed
+        # Suppress specific classes, if needed
+        
+        for i in range(det_boxes.size(0)):
+            if suppress is not None:
+                if det_labels[i] in suppress:
+                    continue
+
+            # Boxes
+            box_location = det_boxes[i].tolist()
+            draw.rectangle(xy=box_location, outline=label_color_map[det_labels[i]])
+            draw.rectangle(xy=[l + 1. for l in box_location], outline=label_color_map[
+                det_labels[i]])  # a second rectangle at an offset of 1 pixel to increase line thickness
+            # Text
+            text_size = font.getsize(det_labels[i].upper())
+            text_location = [box_location[0] + 2., box_location[1] - text_size[1]]
+            textbox_location = [box_location[0], box_location[1] - text_size[1], box_location[0] + text_size[0] + 4.,
+                                box_location[1]]
+            draw.rectangle(xy=textbox_location, fill=label_color_map[det_labels[i]])
+            draw.text(xy=text_location, text=f'{det_labels[i].upper()} {det_scores[0][i].item() * 100}', fill='white',
+                      font=font)
+        del draw
+
 
     with open(csv_file, 'w') as f:
         f.write(f'left,top,right,bottom,class,confidence\n')
@@ -113,12 +135,20 @@ if __name__ == '__main__':
         default="0"
     )
 
+    ap.add_argument(
+        "--draw",
+        action="store_true",
+        help="Output jpg with bounding boxes",
+    )
+
     args = ap.parse_args()
     for i,img in enumerate(args.input):
         original_image = Image.open(img, mode='r')
         original_image = original_image.convert('RGB')
         if args.frames:
-            detect(original_image, min_score=0.4, max_overlap=0.5, top_k=200, pid=args.pid, frame_id=args.frames[i])
+            output = detect(original_image, min_score=0.4, max_overlap=0.5, top_k=200, pid=args.pid, frame_id=args.frames[i], draw_img=args.draw)
         else:
-            detect(original_image, min_score=0.4, max_overlap=0.5, top_k=200, pid=args.pid)
+            output = detect(original_image, min_score=0.4, max_overlap=0.5, top_k=200, pid=args.pid, draw_img=args.draw)
+        if args.draw:
+            output.save(f'predictions.jpg')
 
